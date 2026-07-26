@@ -1,26 +1,29 @@
-# Multi-stage Docker build for VLM Hallucination Studio
-FROM python:3.10-slim AS builder
+# Stage 1: Build Frontend with official Node 20
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend ./
+RUN npm run build
 
+# Stage 2: Production Python Backend with Static Frontend
+FROM python:3.10-slim
 WORKDIR /app
 
-# Install Node.js & NPM
-RUN apt-get update && apt-get install -y curl nodejs npm && rm -rf /var/lib/apt/lists/*
+# Install Python backend dependencies
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
-# Copy backend requirements & install Python packages
-COPY backend/requirements.txt /app/backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+# Copy built frontend dist assets from Stage 1
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Copy frontend & build production bundle
-COPY frontend /app/frontend
-WORKDIR /app/frontend
-RUN npm install && npm run build
-
-# Copy backend application code
-COPY backend /app/backend
+# Copy backend application files
+COPY backend ./backend
 WORKDIR /app/backend
 
-# Expose port for FastAPI
+# Expose port
+ENV PORT=8000
 EXPOSE 8000
 
-# Start Uvicorn production server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start Uvicorn bound to Render PORT variable
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
