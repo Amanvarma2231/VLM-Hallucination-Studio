@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://vlm-hallucination-studio-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/ws/:path*",
+      "destination": "https://vlm-hallucination-studio-api.onrender.com/ws/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://vlm-hallucination-studio-api.onrender.com/uploads/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
