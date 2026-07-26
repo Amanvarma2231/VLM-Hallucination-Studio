@@ -1,27 +1,21 @@
-# Multi-stage Docker build for VLM Hallucination Studio
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend ./
-RUN npm run build
-
+# Production Dockerfile for VLM Hallucination Studio
 FROM python:3.10-slim
+
 WORKDIR /app
 
 # Install Python backend dependencies
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
-# Copy built frontend dist assets
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-
-# Copy backend application files
+# Copy pre-built frontend static assets and backend application
+COPY frontend/dist ./frontend/dist
 COPY backend ./backend
+
 WORKDIR /app/backend
 
-# Set port & start server
+# Configure port for Render / Cloud deployment
 ENV PORT=8000
 EXPOSE 8000
 
+# Start Uvicorn server bound to $PORT
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
