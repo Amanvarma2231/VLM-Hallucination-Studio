@@ -8,11 +8,13 @@ from typing import List, Optional
 
 from database import (
     get_db, SessionModel, ExtractedTokenModel, TrainingSampleModel,
-    MedicalReviewModel, ModelComparisonModel
+    MedicalReviewModel, ModelComparisonModel, PuzzleModel, PuzzleEvalModel
 )
 from schemas import (
     AnalyzeRequest, SessionResponse, TrainingSampleResponse, DashboardStats, TokenDetail,
-    CompareRequest, CompareResponse, CompareResultItem, MedicalGuardRequest, MedicalReviewResponse
+    CompareRequest, CompareResponse, CompareResultItem, MedicalGuardRequest, MedicalReviewResponse,
+    PuzzleCreate, PuzzleResponse, PuzzleEvalRequest, PuzzleEvalResponse,
+    ExplainTokenRequest, ExplainTokenResponse
 )
 from hallucination_engine import VLMHallucinationEngine
 
@@ -37,13 +39,21 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     total_tokens = db.query(ExtractedTokenModel).filter(ExtractedTokenModel.is_hallucinated == True).count()
     total_samples = db.query(TrainingSampleModel).count()
 
+    total_puzzles = db.query(PuzzleModel).count()
+    evals = db.query(PuzzleEvalModel).all()
+    correct_evals = sum(1 for e in evals if e.is_correct)
+    pass_rate = float(correct_evals / len(evals)) if evals else 0.0
+
     return DashboardStats(
         total_sessions=total_sessions,
         avg_hallucination_score=round(avg_score, 3),
         total_hallucinated_tokens=total_tokens,
         total_training_samples=total_samples,
-        models_active=["Gemma-4 VLM", "PaliGemma-3B", "LLaVA-1.6", "Custom Vision-Language Transformer"]
+        models_active=["Gemma-4 VLM", "PaliGemma-3B", "LLaVA-1.6", "Custom Vision-Language Transformer"],
+        total_puzzles=total_puzzles,
+        puzzle_pass_rate=round(pass_rate, 3)
     )
+
 
 
 @router.post("/analyze", response_model=SessionResponse)
@@ -273,55 +283,201 @@ def export_dataset(db: Session = Depends(get_db)):
     )
 
 
-@router.post("/seed-demo")
-def seed_demo_data(db: Session = Depends(get_db)):
-    if db.query(SessionModel).count() > 0:
-        return {"message": "Database already contains sessions."}
+@router.post("/explain-token", response_model=ExplainTokenResponse)
+def explain_token_endpoint(req: ExplainTokenRequest):
+    res = engine_instance.explain_token_hallucination(
+        token_text=req.token_text,
+        logit_entropy=req.logit_entropy,
+        visual_grounding_score=req.visual_grounding_score,
+        attention_x=req.attention_x,
+        attention_y=req.attention_y,
+        context_prompt=req.context_prompt or ""
+    )
+    return ExplainTokenResponse(**res)
 
-    demo_prompts = [
-        "A robotic astronaut standing on a glowing red crater with transparent crystal towers in the background.",
-        "An ancient temple built inside a giant floating water droplet surrounded by neon lightning.",
-        "A futuristic cyberpunk street market selling bioluminescent jellyfish and holographic artifacts."
+
+@router.get("/puzzles", response_model=List[PuzzleResponse])
+def get_puzzles(db: Session = Depends(get_db)):
+    # Auto seed initial unknown visual puzzles if empty
+    if db.query(PuzzleModel).count() == 0:
+        seed_puzzles_in_db(db)
+
+    puzzles = db.query(PuzzleModel).order_by(PuzzleModel.created_at.desc()).all()
+    return puzzles
+
+
+@router.post("/puzzles", response_model=PuzzleResponse)
+def create_puzzle(req: PuzzleCreate, db: Session = Depends(get_db)):
+    p_id = str(uuid.uuid4())
+    puzzle_db = PuzzleModel(
+        id=p_id,
+        title=req.title,
+        category=req.category,
+        question=req.question,
+        ground_truth_answer=req.ground_truth_answer,
+        explanation=req.explanation,
+        image_url=req.image_url,
+        difficulty=req.difficulty or "Hard"
+    )
+    db.add(puzzle_db)
+    db.commit()
+    db.refresh(puzzle_db)
+    return puzzle_db
+
+
+@router.post("/puzzles/evaluate", response_model=PuzzleEvalResponse)
+def evaluate_puzzle(req: PuzzleEvalRequest, db: Session = Depends(get_db)):
+    puzzle_db = db.query(PuzzleModel).filter(PuzzleModel.id == req.puzzle_id).first()
+    if not puzzle_db:
+        raise HTTPException(status_code=404, detail="Puzzle not found")
+
+    res = engine_instance.evaluate_unknown_puzzle(
+        puzzle_id=puzzle_db.id,
+        title=puzzle_db.title,
+        category=puzzle_db.category,
+        question=puzzle_db.question,
+        ground_truth=puzzle_db.ground_truth_answer,
+        explanation=puzzle_db.explanation,
+        model_name=req.model_name or "Gemma-4 VLM (Multimodal)"
+    )
+
+    eval_id = str(uuid.uuid4())
+    eval_db = PuzzleEvalModel(
+        id=eval_id,
+        puzzle_id=puzzle_db.id,
+        model_name=res["model_name"],
+        vlm_response=res["vlm_response"],
+        is_correct=res["is_correct"],
+        hallucination_score=res["hallucination_score"],
+        hallucination_type=res["hallucination_type"],
+        diagnostic_proof=res["diagnostic_proof"]
+    )
+    db.add(eval_db)
+    db.commit()
+    db.refresh(eval_db)
+    return eval_db
+
+
+def seed_puzzles_in_db(db: Session):
+    default_puzzles = [
+        {
+            "id": "puz-001",
+            "title": "3D Isometric Cube Count Trick",
+            "category": "Spatial 3D",
+            "question": "How many total unit cubes are required to build this isometric structure including hidden support cubes?",
+            "ground_truth_answer": "Exactly 14 unit cubes (9 visible, 5 hidden base supports).",
+            "explanation": "VLMs often count only surface visible faces (9) or hallucinate non-existent floating cubes (18+) without verifying structural physics support logic.",
+            "difficulty": "Hard"
+        },
+        {
+            "id": "puz-002",
+            "title": "Café Wall Optical Line Parallelism",
+            "category": "Optical Illusion",
+            "question": "Are the horizontal mortar lines between the black and white tiles perfectly parallel or tilted?",
+            "ground_truth_answer": "They are perfectly parallel.",
+            "explanation": "VLMs succumb to luminance optical illusions, declaring lines to be slanted at 15 degrees due to feature map distortion in early conv/vit layers.",
+            "difficulty": "Medium"
+        },
+        {
+            "id": "puz-003",
+            "title": "Counterfactual Gravity-Defying Clock",
+            "category": "Counterfactual Logic",
+            "question": "Describe the clock hands in this image and state if it obeys standard wall mounting physics.",
+            "ground_truth_answer": "The clock face is inverted with counter-clockwise numbers; it is mounted upside down floating without a wall mount.",
+            "explanation": "Standard VLMs hallucinate 'mounted on a white wall ticking clockwise at 3:00' due to strong training dataset prior bias, completely ignoring counterfactual visual anomaly.",
+            "difficulty": "Extreme"
+        },
+        {
+            "id": "puz-004",
+            "title": "Mirror Image OCR Text Read Direction",
+            "category": "Text OCR Trick",
+            "question": "Transcribe the text on the store window as seen through the rearview mirror reflection.",
+            "ground_truth_answer": "AMBULANCE EMERGENCY PHARMACY",
+            "explanation": "VLMs fail spatial mirror reflection inversion and hallucinate scrambled gibberish tokens ('AMB-LANCE-99') when reading mirrored typography.",
+            "difficulty": "Hard"
+        }
     ]
 
-    for p in demo_prompts:
-        res = engine_instance.analyze_prompt_and_image(prompt=p, has_image=True)
-        sess_id = str(uuid.uuid4())
-        session_db = SessionModel(
-            id=sess_id,
-            prompt=p,
-            model_name="Gemma-4 VLM (Multimodal)",
-            overall_hallucination_score=res["overall_hallucination_score"],
-            visual_drift_index=res["visual_drift_index"],
-            mean_entropy=res["mean_entropy"],
-            hallucination_intensity=res["hallucination_intensity"],
-            generated_text=res["generated_text"]
+    for p in default_puzzles:
+        puzzle_db = PuzzleModel(**p)
+        db.add(puzzle_db)
+
+        # Add initial evaluation sample for Gemma-4
+        res = engine_instance.evaluate_unknown_puzzle(
+            puzzle_id=p["id"],
+            title=p["title"],
+            category=p["category"],
+            question=p["question"],
+            ground_truth=p["ground_truth_answer"],
+            explanation=p["explanation"],
+            model_name="Gemma-4 VLM (Multimodal)"
         )
-        db.add(session_db)
-
-        for t in res["tokens"]:
-            token_obj = ExtractedTokenModel(
-                session_id=sess_id,
-                token_index=t["token_index"],
-                token_text=t["token_text"],
-                logit_entropy=t["logit_entropy"],
-                visual_grounding_score=t["visual_grounding_score"],
-                is_hallucinated=t["is_hallucinated"],
-                attention_x=t["attention_x"],
-                attention_y=t["attention_y"]
-            )
-            db.add(token_obj)
-
-        for seg in res["extracted_segments"]:
-            sample_obj = TrainingSampleModel(
-                session_id=sess_id,
-                prompt=seg["prompt"],
-                hallucinated_segment=seg["hallucinated_segment"],
-                ground_truth_context=p,
-                sample_type=seg["sample_type"]
-            )
-            db.add(sample_obj)
+        eval_db = PuzzleEvalModel(
+            id=str(uuid.uuid4()),
+            puzzle_id=p["id"],
+            model_name=res["model_name"],
+            vlm_response=res["vlm_response"],
+            is_correct=res["is_correct"],
+            hallucination_score=res["hallucination_score"],
+            hallucination_type=res["hallucination_type"],
+            diagnostic_proof=res["diagnostic_proof"]
+        )
+        db.add(eval_db)
 
     db.commit()
-    return {"message": "Demo session and hallucination dataset seeded successfully."}
+
+
+@router.post("/seed-demo")
+def seed_demo_data(db: Session = Depends(get_db)):
+    if db.query(SessionModel).count() == 0:
+        demo_prompts = [
+            "A robotic astronaut standing on a glowing red crater with transparent crystal towers in the background.",
+            "An ancient temple built inside a giant floating water droplet surrounded by neon lightning.",
+            "A futuristic cyberpunk street market selling bioluminescent jellyfish and holographic artifacts."
+        ]
+
+        for p in demo_prompts:
+            res = engine_instance.analyze_prompt_and_image(prompt=p, has_image=True)
+            sess_id = str(uuid.uuid4())
+            session_db = SessionModel(
+                id=sess_id,
+                prompt=p,
+                model_name="Gemma-4 VLM (Multimodal)",
+                overall_hallucination_score=res["overall_hallucination_score"],
+                visual_drift_index=res["visual_drift_index"],
+                mean_entropy=res["mean_entropy"],
+                hallucination_intensity=res["hallucination_intensity"],
+                generated_text=res["generated_text"]
+            )
+            db.add(session_db)
+
+            for t in res["tokens"]:
+                token_obj = ExtractedTokenModel(
+                    session_id=sess_id,
+                    token_index=t["token_index"],
+                    token_text=t["token_text"],
+                    logit_entropy=t["logit_entropy"],
+                    visual_grounding_score=t["visual_grounding_score"],
+                    is_hallucinated=t["is_hallucinated"],
+                    attention_x=t["attention_x"],
+                    attention_y=t["attention_y"]
+                )
+                db.add(token_obj)
+
+            for seg in res["extracted_segments"]:
+                sample_obj = TrainingSampleModel(
+                    session_id=sess_id,
+                    prompt=seg["prompt"],
+                    hallucinated_segment=seg["hallucinated_segment"],
+                    ground_truth_context=p,
+                    sample_type=seg["sample_type"]
+                )
+                db.add(sample_obj)
+
+    if db.query(PuzzleModel).count() == 0:
+        seed_puzzles_in_db(db)
+
+    db.commit()
+    return {"message": "Demo sessions and unknown puzzle benchmarks seeded successfully."}
+
 

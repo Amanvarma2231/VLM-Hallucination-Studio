@@ -82,6 +82,38 @@ class ModelComparisonModel(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class PuzzleModel(Base):
+    __tablename__ = "puzzles"
+
+    id = Column(String, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    category = Column(String, nullable=False) # e.g., Spatial 3D, Optical Illusion, Counting Grid, Counterfactual, OCR Trick
+    question = Column(Text, nullable=False)
+    ground_truth_answer = Column(Text, nullable=False)
+    explanation = Column(Text, nullable=False)
+    image_url = Column(String, nullable=True)
+    difficulty = Column(String, default="Hard")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    evaluations = relationship("PuzzleEvalModel", back_populates="puzzle", cascade="all, delete-orphan")
+
+
+class PuzzleEvalModel(Base):
+    __tablename__ = "puzzle_evaluations"
+
+    id = Column(String, primary_key=True, index=True)
+    puzzle_id = Column(String, ForeignKey("puzzles.id"), nullable=False)
+    model_name = Column(String, nullable=False)
+    vlm_response = Column(Text, nullable=False)
+    is_correct = Column(Boolean, default=False)
+    hallucination_score = Column(Float, default=0.0)
+    hallucination_type = Column(String, default="None") # e.g., Spurious Count, Optical Distortion Fallacy, Object Invention
+    diagnostic_proof = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    puzzle = relationship("PuzzleModel", back_populates="evaluations")
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
@@ -92,3 +124,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

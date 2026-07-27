@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Sliders, Eye, Scale, ShieldAlert, BarChart3, Database, BookOpen, Layers, ChevronLeft, ChevronRight, Activity } from 'lucide-react';
+import { Home, Sliders, Eye, Scale, ShieldAlert, BarChart3, Database, BookOpen, Layers, ChevronLeft, ChevronRight, Activity, Sparkles } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab, collapsed, onToggleCollapse }) {
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -11,6 +11,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, onToggleCo
       .then(r => r.json())
       .then(d => setSessionCounts({
         studio: d.total_sessions || 0,
+        puzzles: d.total_puzzles || 0,
         analytics: d.total_sessions || 0,
         dataset: d.total_training_samples || 0,
       }))
@@ -21,6 +22,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, onToggleCo
     { id: 'home', label: 'Overview', icon: Home },
     { divider: 'Core Modules' },
     { id: 'studio', label: 'Hallucination Studio', icon: Sliders, badge: 'Realtime', color: 'var(--accent-cyan)' },
+    { id: 'puzzles', label: 'Unknown Visual Puzzles', icon: Sparkles, badge: 'OOD Test', color: 'var(--accent-purple)' },
     { id: 'heatmap', label: 'Attention Heatmap', icon: Eye, badge: 'Visual', color: 'var(--accent-purple)' },
     { id: 'compare', label: 'Model Comparison', icon: Scale, badge: 'DoLa α', color: 'var(--accent-blue)' },
     { id: 'medical', label: 'Medical Safety Guard', icon: ShieldAlert, badge: 'Clinical', color: '#ef4444' },
@@ -30,6 +32,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, onToggleCo
     { divider: 'Documentation' },
     { id: 'finetune', label: 'Fine-Tuning Guide', icon: BookOpen, badge: 'Docs', color: 'var(--accent-pink)' },
   ];
+
 
   const sidebarWidth = collapsed ? '64px' : '256px';
 

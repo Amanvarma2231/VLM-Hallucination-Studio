@@ -88,3 +88,48 @@ export function getExportDatasetUrl() {
   return `${API_BASE}/export-dataset`;
 }
 
+export async function explainToken(tokenData) {
+  const res = await fetch(`${API_BASE}/explain-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tokenData),
+  });
+  if (!res.ok) {
+    throw new Error('Token explainability request failed');
+  }
+  return res.json();
+}
+
+export async function fetchPuzzles() {
+  const res = await fetch(`${API_BASE}/puzzles`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch unknown puzzles');
+  }
+  return res.json();
+}
+
+export async function createPuzzle(puzzleData) {
+  const res = await fetch(`${API_BASE}/puzzles`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(puzzleData),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to create puzzle');
+  }
+  return res.json();
+}
+
+export async function evaluatePuzzle(puzzleId, modelName = 'Gemma-4 VLM (Multimodal)') {
+  const res = await fetch(`${API_BASE}/puzzles/evaluate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ puzzle_id: puzzleId, model_name: modelName }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to evaluate unknown puzzle');
+  }
+  return res.json();
+}
+
+

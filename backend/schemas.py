@@ -102,4 +102,73 @@ class DashboardStats(BaseModel):
     total_hallucinated_tokens: int
     total_training_samples: int
     models_active: List[str]
+    total_puzzles: Optional[int] = 0
+    puzzle_pass_rate: Optional[float] = 0.0
+
+
+class PuzzleCreate(BaseModel):
+    title: str
+    category: str
+    question: str
+    ground_truth_answer: str
+    explanation: str
+    image_url: Optional[str] = None
+    difficulty: Optional[str] = "Hard"
+
+
+class PuzzleEvalRequest(BaseModel):
+    puzzle_id: str
+    model_name: Optional[str] = "Gemma-4 VLM (Multimodal)"
+
+
+class PuzzleEvalResponse(BaseModel):
+    id: str
+    puzzle_id: str
+    model_name: str
+    vlm_response: str
+    is_correct: bool
+    hallucination_score: float
+    hallucination_type: str
+    diagnostic_proof: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PuzzleResponse(BaseModel):
+    id: str
+    title: str
+    category: str
+    question: str
+    ground_truth_answer: str
+    explanation: str
+    image_url: Optional[str] = None
+    difficulty: str
+    created_at: datetime
+    evaluations: List[PuzzleEvalResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ExplainTokenRequest(BaseModel):
+    token_text: str
+    logit_entropy: float
+    visual_grounding_score: float
+    attention_x: float
+    attention_y: float
+    context_prompt: Optional[str] = None
+
+
+class ExplainTokenResponse(BaseModel):
+    token_text: str
+    is_hallucinated: bool
+    hallucination_category: str
+    entropy_analysis: str
+    grounding_analysis: str
+    spatial_region_proof: str
+    why_hallucinated_explanation: str
+    confidence_verdict: str
+
 

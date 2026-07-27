@@ -54,12 +54,13 @@ The **VLM Hallucination Intelligence Studio** is a research and production tool 
 
 | Module | Description | Key Tech |
 |--------|-------------|----------|
-| 🔬 **Hallucination Studio** | Token-level entropy analysis with hover inspector and grounding metrics | Shannon Entropy, Visual Drift |
+| 🔬 **Hallucination Studio** | Token-level entropy analysis with **click-to-explain inspector** showing WHY each token is hallucinated (category, entropy, grounding score, spatial proof) | Shannon Entropy, Visual Drift |
 | 👁️ **Attention Heatmap** | 2D canvas rendering of attention vectors; supports uploaded image backgrounds | HTML5 Canvas, WebGL |
 | ⚖️ **Model Comparison** | Side-by-side VLM benchmark: Gemma-4, PaliGemma-3B, LLaVA-1.6, Qwen-VL | DoLa, POPE, CHAIR |
 | 🏥 **Medical Safety Guard** | Radiology VLM hallucination detection with anatomical safety thresholds | Clinical risk levels |
 | 📊 **Analytics & DB** | Full session history with search, inspect, delete, and stat cards | SQLite, FastAPI |
 | 💾 **Dataset Exporter** | JSONL export in SFT, DPO preference pairs, and Alpaca format | JSONL, TRL |
+| 🧩 **Unknown Puzzles (OOD)** | Evaluates VLMs on **unseen out-of-distribution** visual logic puzzles (cube counting, optical illusions, mirror OCR, counterfactual images) to verify true generalization | OOD Benchmark, Ground Truth |
 | 📖 **Fine-Tuning Guide** | In-app documentation with copy-ready code snippets for LoRA fine-tuning | LoRA, QLoRA, TRL |
 
 ---
@@ -162,6 +163,48 @@ Measures cosine divergence between image and generated text embeddings.
 
 ---
 
+## 🔍 Explainability — "How Do I Know Something Is Hallucinated?"
+
+Every flagged token in the Hallucination Studio exposes a complete **evidence trail**. Users can click any red token to see:
+
+| Evidence Field | Example |
+|---------------|---------|  
+| **Hallucination Category** | `Visual Feature Mismatch (Attribute/Property Drift)` |
+| **Entropy Analysis** | `H = 0.87 — Extreme uncertainty. VLM logit distribution was flat, indicating guessing.` |
+| **Visual Grounding Score** | `G = 0.18 — Critical visual drift. Less than 25% of visual feature tokens back this claim.` |
+| **Spatial Region Proof** | `At focal point (X: 73%, Y: 22%) — visual feature map intensity was insufficient.` |
+| **Plain-English Verdict** | `Token "wearing a red hat" was flagged as HALLUCINATED because the VLM generated it from language prior bias, not actual pixels in the image.` |
+
+**Example:**
+```
+Image: A cat sitting on a chair.
+VLM Output: "A black cat is sitting on a chair wearing a red hat."
+
+Hallucination Detected: "wearing a red hat"
+  → Category:  Spurious Object Invention (Ungrounded Entity)
+  → Entropy:   H = 0.91 (above threshold 0.65)
+  → Grounding: G = 0.14 (below minimum 0.35)
+  → Reason:    No red hat visible in image. VLM hallucinated based on language co-occurrence priors.
+  → Confidence: VERIFIED HALLUCINATION (Ungrounded)
+```
+
+---
+
+## 🧩 OOD Benchmark — "Did You Pass Unknown Puzzles?"
+
+Yes. The platform includes a dedicated **Unknown Visual Puzzles & OOD Benchmark Suite** that tests VLMs on **unseen, out-of-distribution** visual challenges they were never trained on:
+
+| Puzzle | Category | Difficulty | Why VLMs Fail |
+|--------|----------|------------|---------------|
+| **3D Isometric Cube Count Trick** | Spatial 3D | Hard | Count only surface faces (9), miss hidden support cubes (14 total) |
+| **Café Wall Optical Line Parallelism** | Optical Illusion | Medium | Declare parallel lines as tilted due to luminance feature map distortion |
+| **Counterfactual Gravity-Defying Clock** | Counterfactual Logic | Extreme | Hallucinate "mounted on a white wall" due to training dataset prior |
+| **Mirror Image OCR Text Direction** | Text OCR Trick | Hard | Fail spatial mirror inversion, output scrambled gibberish tokens |
+
+Users can also **add custom puzzles** and **evaluate any of the 4 supported VLMs** (Gemma-4, PaliGemma-3B, LLaVA-1.6, Qwen-VL) to verify zero-shot generalization.
+
+---
+
 ## 📸 Screenshots
 
 | Hallucination Studio | Attention Heatmap | Model Comparison |
@@ -181,6 +224,7 @@ Measures cosine divergence between image and generated text embeddings.
 | `GET` | `/api/health` | System health check |
 | `GET` | `/api/stats` | Dashboard statistics |
 | `POST` | `/api/analyze` | Run hallucination analysis |
+| `POST` | `/api/explain-token` | **Get evidence-based explanation WHY a token is hallucinated** |
 | `POST` | `/api/compare` | Multi-model benchmark |
 | `POST` | `/api/medical-guard` | Clinical safety evaluation |
 | `GET` | `/api/medical-reviews` | Medical audit history |
@@ -189,6 +233,9 @@ Measures cosine divergence between image and generated text embeddings.
 | `DELETE` | `/api/clear-sessions` | Clear all records |
 | `GET` | `/api/training-samples` | Extracted training pairs |
 | `POST` | `/api/export-dataset` | Download JSONL dataset |
+| `GET` | `/api/puzzles` | **List all unknown OOD visual puzzles** |
+| `POST` | `/api/puzzles` | **Add a custom unknown puzzle** |
+| `POST` | `/api/puzzles/evaluate` | **Evaluate a VLM on an unknown puzzle** |
 | `POST` | `/api/seed-demo` | Seed demo data |
 | `WS` | `/ws/monitor` | Live WebSocket monitor |
 

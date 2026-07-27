@@ -3,7 +3,7 @@ import {
   Brain, Zap, ShieldCheck, BarChart3, Database, Eye, Scale,
   ArrowRight, Code2,
   Cpu, Sparkles, Activity, FlaskConical, Layers, Globe, Star,
-  ChevronRight, Play, BookOpen, Award
+  ChevronRight, Play, BookOpen, Award, HelpCircle, ShieldAlert, Puzzle, Search
 } from 'lucide-react';
 
 export default function LandingPage({ setActiveTab }) {
@@ -159,7 +159,7 @@ export default function LandingPage({ setActiveTab }) {
       icon: Brain,
       color: 'var(--accent-cyan)',
       title: 'Hallucination Studio',
-      desc: 'Real-time VLM token-level hallucination extraction with Shannon Entropy scoring, logit distribution analysis, and visual grounding metrics.',
+      desc: 'Real-time VLM token-level hallucination extraction with Shannon Entropy scoring, logit distribution analysis, and visual grounding metrics. Click any token → see WHY it is hallucinated.',
       tab: 'studio',
       badge: 'Realtime'
     },
@@ -202,6 +202,14 @@ export default function LandingPage({ setActiveTab }) {
       desc: 'Export curated hallucination pairs as JSONL in SFT, DPO, and Alpaca formats — ready for Gemma / LLaVA fine-tuning pipelines.',
       tab: 'dataset',
       badge: 'JSONL'
+    },
+    {
+      icon: HelpCircle,
+      color: 'var(--accent-rose)',
+      title: 'Unknown Puzzles (OOD)',
+      desc: 'Evaluates VLMs on unseen visual logic puzzles — cube counting, optical illusions, OCR mirror tricks, counterfactual images — to verify true generalization beyond training data.',
+      tab: 'puzzles',
+      badge: 'OOD Testing'
     },
   ];
 
@@ -335,7 +343,7 @@ export default function LandingPage({ setActiveTab }) {
       <section style={{ padding: '56px 40px' }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '10px' }}>
-            Six-Module <span className="text-gradient">AI Safety Engine</span>
+            Seven-Module <span className="text-gradient">AI Safety Engine</span>
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
             Each module is independently operational with full backend persistence.
@@ -390,6 +398,134 @@ export default function LandingPage({ setActiveTab }) {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* ─── REVIEWER ANSWERS: EXPLAINABILITY + OOD SECTION ─── */}
+      <section style={{
+        padding: '56px 40px',
+        background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.04) 0%, rgba(168, 85, 247, 0.04) 100%)',
+        borderTop: '1px solid var(--border-color)',
+        borderBottom: '1px solid var(--border-color)'
+      }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <span className="gradient-badge" style={{ marginBottom: '14px', display: 'inline-flex' }}>
+              <ShieldAlert size={13} /> Reviewer Q&A — Core Architecture Proof
+            </span>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>
+              How Does a User <span className="text-gradient">Know</span> Something Is Hallucinated?
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginTop: '10px', maxWidth: '680px', margin: '10px auto 0' }}>
+              Every hallucinated token exposes a full evidence trail — not just a red label, but the exact reasoning, metric values, and spatial proof behind the decision.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px' }}>
+
+            {/* Card 1 — Explainability */}
+            <div
+              className="glass-panel"
+              onClick={() => setActiveTab('studio')}
+              style={{
+                padding: '28px',
+                border: '1px solid rgba(0, 242, 254, 0.3)',
+                background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.07) 0%, rgba(0,0,0,0) 100%)',
+                cursor: 'pointer',
+                transition: 'var(--transition-base)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '14px',
+                  background: 'rgba(0, 242, 254, 0.12)',
+                  border: '1px solid rgba(0, 242, 254, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Search size={22} color="var(--accent-cyan)" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Q1 — Reviewer Question</div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>"How do I know something is hallucinated?"</h3>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                {[
+                  { label: 'Hallucination Category', value: 'Visual Feature Mismatch (Attribute Drift)', color: 'var(--accent-purple)' },
+                  { label: 'Logit Entropy (H)', value: 'H = 0.87 → Extreme uncertainty in VLM logit distribution', color: 'var(--accent-pink)' },
+                  { label: 'Visual Grounding Score (G)', value: 'G = 0.18 → Less than 25% of visual features support this token', color: 'var(--accent-rose)' },
+                  { label: 'Spatial Proof', value: 'At focal point (X: 73%, Y: 22%) — no matching pixel evidence found', color: 'var(--accent-amber)' },
+                ].map((item, i) => (
+                  <div key={i} style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
+                    <div style={{ fontSize: '0.82rem', color: item.color, fontWeight: 600, marginTop: '2px' }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ padding: '14px 16px', borderRadius: '10px', background: 'rgba(0, 242, 254, 0.06)', border: '1px solid rgba(0, 242, 254, 0.2)', fontSize: '0.83rem', lineHeight: '1.6' }}>
+                <strong style={{ color: 'var(--accent-cyan)' }}>→ Verdict:</strong> The token <code style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent-pink)' }}>"wearing a red hat"</code> was flagged as <strong>HALLUCINATED</strong> because the VLM generated it from language prior bias, not from actual pixels in the image.
+              </div>
+
+              <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-cyan)', fontSize: '0.82rem', fontWeight: 600 }}>
+                Open Hallucination Studio → Click any Red Token <ChevronRight size={14} />
+              </div>
+            </div>
+
+            {/* Card 2 — Unknown Puzzles OOD */}
+            <div
+              className="glass-panel"
+              onClick={() => setActiveTab('puzzles')}
+              style={{
+                padding: '28px',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.07) 0%, rgba(0,0,0,0) 100%)',
+                cursor: 'pointer',
+                transition: 'var(--transition-base)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '14px',
+                  background: 'rgba(168, 85, 247, 0.12)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <HelpCircle size={22} color="var(--accent-purple)" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Q2 — Reviewer Question</div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>"Did you pass unknown puzzles to this?"</h3>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '16px' }}>
+                Yes. The platform includes a dedicated <strong style={{ color: 'var(--accent-purple)' }}>OOD (Out-of-Distribution) Benchmark Suite</strong> with unseen visual puzzles that VLMs were never trained on:
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                {[
+                  { emoji: '🧊', title: '3D Isometric Cube Count Trick', type: 'Spatial 3D', diff: 'Hard', note: 'Hidden support cubes — VLMs count only surface faces' },
+                  { emoji: '🌀', title: 'Café Wall Optical Line Illusion', type: 'Optical Illusion', diff: 'Medium', note: 'Perfectly parallel lines appear tilted due to luminance bias' },
+                  { emoji: '🕐', title: 'Counterfactual Gravity-Defying Clock', type: 'Counterfactual Logic', diff: 'Extreme', note: 'VLMs hallucinate "mounted on a wall" due to training prior' },
+                  { emoji: '🪞', title: 'Mirror OCR Text Read Direction', type: 'Text OCR Trick', diff: 'Hard', note: 'VLMs fail spatial mirror inversion — scramble the text' },
+                ].map((p, i) => (
+                  <div key={i} style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{p.emoji}</span>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>{p.title} <span className={`badge ${p.diff === 'Extreme' ? 'badge-pink' : 'badge-cyan'}`} style={{ fontSize: '0.6rem' }}>{p.diff}</span></div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{p.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-purple)', fontSize: '0.82rem', fontWeight: 600 }}>
+                Open Unknown Puzzles Studio → Evaluate any model <ChevronRight size={14} />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

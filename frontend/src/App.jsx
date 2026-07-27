@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import LandingPage from './components/LandingPage';
 import HallucinationStudio from './components/HallucinationStudio';
+import UnknownPuzzlesStudio from './components/UnknownPuzzlesStudio';
 import AttentionHeatmap from './components/AttentionHeatmap';
 import ModelComparison from './components/ModelComparison';
 import MedicalGuard from './components/MedicalGuard';
@@ -59,9 +60,14 @@ export default function App() {
               />
             )}
 
+            {activeTab === 'puzzles' && (
+              <UnknownPuzzlesStudio />
+            )}
+
             {activeTab === 'heatmap' && (
               <AttentionHeatmap currentSession={currentSession} />
             )}
+
 
             {activeTab === 'compare' && (
               <ModelComparison />

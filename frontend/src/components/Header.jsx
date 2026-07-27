@@ -65,6 +65,7 @@ export default function Header({ onRefreshStats, activeTab, setActiveTab }) {
   const paletteItems = [
     { id: 'home', label: 'Overview', shortcut: '⌘H' },
     { id: 'studio', label: 'Hallucination Studio', shortcut: '⌘1' },
+    { id: 'puzzles', label: 'Unknown Visual Puzzles', shortcut: '⌘P' },
     { id: 'heatmap', label: 'Attention Heatmap', shortcut: '⌘2' },
     { id: 'compare', label: 'Model Comparison', shortcut: '⌘3' },
     { id: 'medical', label: 'Medical Safety Guard', shortcut: '⌘4' },
@@ -72,6 +73,7 @@ export default function Header({ onRefreshStats, activeTab, setActiveTab }) {
     { id: 'dataset', label: 'Dataset Exporter', shortcut: '⌘6' },
     { id: 'finetune', label: 'Fine-Tuning Guide', shortcut: '' },
   ];
+
 
   const filteredPalette = paletteItems.filter(item =>
     item.label.toLowerCase().includes(paletteQuery.toLowerCase())
